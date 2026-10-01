@@ -6,17 +6,8 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (Environment.GetEnvironmentVariable("PORT") is { } port)
-{
-    builder.WebHost.UseUrls($"http://+:{port}");
-}
-
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") is { } databaseUrl
-    ? ConnectionStringHelper.FromDatabaseUrl(databaseUrl)
-    : builder.Configuration.GetConnectionString("FleetDb");
-
 builder.Services.AddDbContext<FleetDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("FleetDb")));
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using VehicleFleetMS.Data;
 
@@ -11,9 +12,11 @@ using VehicleFleetMS.Data;
 namespace VehicleFleetMS.Data.Migrations
 {
     [DbContext(typeof(FleetDbContext))]
-    partial class FleetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713144136_AddSettingsLogoPath")]
+    partial class AddSettingsLogoPath
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -364,15 +367,6 @@ namespace VehicleFleetMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Phone")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("PhotoPath")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -382,11 +376,6 @@ namespace VehicleFleetMS.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
 
                     b.HasKey("Id");
 
