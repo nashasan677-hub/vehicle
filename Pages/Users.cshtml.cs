@@ -29,7 +29,12 @@ public class UsersModel(FleetDbContext db) : PageModel
         AuditLog = await db.AuditLog.OrderByDescending(a => a.OccurredAt).Take(20).ToListAsync();
         ActiveCount = Users.Count(u => u.Status == "Active");
         InvitedCount = Users.Count(u => u.Status == "Invited");
-        RemoveError = removeError == "self" ? "You can't remove your own account while signed in to it." : null;
+        RemoveError = removeError switch
+        {
+            "self" => "You can't remove your own account while signed in to it.",
+            "self-role" => "You can't change your own role away from System Administrator while signed in to it.",
+            _ => null,
+        };
         InviteError = inviteError switch
         {
             "email" => "That email is already in use by another account.",
@@ -95,6 +100,12 @@ public class UsersModel(FleetDbContext db) : PageModel
 
     public async Task<IActionResult> OnPostSetRoleAsync(int id, string role)
     {
+        var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (currentUserId == id.ToString() && role != "System Administrator")
+        {
+            return RedirectToPage(new { removeError = "self-role" });
+        }
+
         var user = await db.Users.FindAsync(id);
         if (user is not null)
         {
