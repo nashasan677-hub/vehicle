@@ -14,16 +14,30 @@ public class UsersModel(FleetDbContext db) : PageModel
     public List<AppUser> Users { get; set; } = [];
     public List<AuditLogItem> AuditLog { get; set; } = [];
     public string? RemoveError { get; set; }
+    public string? InviteError { get; set; }
+    public string? InviteLink { get; set; }
     public int ActiveCount { get; set; }
     public int InvitedCount { get; set; }
+    public bool CanApprove => User.FindFirst(ClaimTypes.Role)?.Value == "System Administrator";
 
-    public async Task OnGetAsync(string? removeError)
+    [TempData]
+    public string? InviteLinkFlash { get; set; }
+
+    public async Task OnGetAsync(string? removeError, string? inviteError)
     {
         Users = await db.Users.OrderBy(u => u.Name).ToListAsync();
         AuditLog = await db.AuditLog.OrderByDescending(a => a.OccurredAt).Take(20).ToListAsync();
         ActiveCount = Users.Count(u => u.Status == "Active");
         InvitedCount = Users.Count(u => u.Status == "Invited");
         RemoveError = removeError == "self" ? "You can't remove your own account while signed in to it." : null;
+        InviteError = inviteError switch
+        {
+            "email" => "That email is already in use by another account.",
+            "username" => "That username is already taken.",
+            "password" => "Password must be at least 8 characters.",
+            _ => null,
+        };
+        InviteLink = InviteLinkFlash;
     }
 
     public async Task<IActionResult> OnGetExportAsync()
@@ -35,19 +49,47 @@ public class UsersModel(FleetDbContext db) : PageModel
         return File(excel, ExcelExport.ContentType, $"users-{DateTime.UtcNow:yyyyMMdd}.xlsx");
     }
 
-    public async Task<IActionResult> OnPostInviteAsync(string name, string email, string role, string department)
+    public async Task<IActionResult> OnPostInviteAsync(string name, string email, string username, string password, string role, string department)
     {
         if (await db.Users.AnyAsync(u => u.Email == email))
         {
-            return RedirectToPage();
+            return RedirectToPage(new { inviteError = "email" });
         }
+        if (await db.Users.AnyAsync(u => u.Username == username))
+        {
+            return RedirectToPage(new { inviteError = "username" });
+        }
+        if (password.Length < 8)
+        {
+            return RedirectToPage(new { inviteError = "password" });
+        }
+
         var initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(p => p[0])).ToUpperInvariant();
-        var user = new AppUser { Name = name, Initials = initials.Length > 2 ? initials[..2] : initials, Email = email, Role = role, Department = department, Status = "Invited" };
+        var user = new AppUser { Name = name, Initials = initials.Length > 2 ? initials[..2] : initials, Email = email, Username = username, Role = role, Department = department, Status = "Invited" };
         var hasher = new PasswordHasher<AppUser>();
-        user.PasswordHash = hasher.HashPassword(user, OtpHelper.GenerateCode() + "Aa1!");
+        user.PasswordHash = hasher.HashPassword(user, password);
         db.Users.Add(user);
         db.AuditLog.Add(new AuditLogItem { Actor = User.Identity?.Name ?? "System", Action = "Invited new user", Target = email, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "—" });
         await db.SaveChangesAsync();
+
+        InviteLinkFlash = Url.Page("/Login", null, new { username, password }, Request.Scheme);
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostApproveAsync(int id)
+    {
+        if (!CanApprove)
+        {
+            return Forbid();
+        }
+
+        var user = await db.Users.FindAsync(id);
+        if (user is not null && user.Status == "Invited")
+        {
+            user.Status = "Active";
+            db.AuditLog.Add(new AuditLogItem { Actor = User.Identity?.Name ?? "System", Action = "Approved user account", Target = user.Email, IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "—" });
+            await db.SaveChangesAsync();
+        }
         return RedirectToPage();
     }
 

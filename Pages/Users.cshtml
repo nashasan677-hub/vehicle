@@ -5,6 +5,7 @@
     ViewData["ActiveNav"] = "users";
 
     string StatusPill(string s) => s switch { "Active" => "pill-good", "Invited" => "pill-info", _ => "pill-critical" };
+    string StatusLabel(string s) => s == "Invited" ? "Pending approval" : s;
 
     var roles = new[] { "System Administrator", "Fleet Manager", "Dispatcher", "Driver", "Auditor" };
     var matrix = new (string Category, bool[] Access)[]
@@ -24,7 +25,7 @@
     <div>
         <div class="crumb">@Html.Raw(IconLibrary.Get("roles")) Administration</div>
         <h1>User &amp; Role Management</h1>
-        <div class="page-header__meta"><span>@Model.Users.Count accounts</span> · <span>@Model.ActiveCount active</span> · <span>@Model.InvitedCount pending invitation</span></div>
+        <div class="page-header__meta"><span>@Model.Users.Count accounts</span> · <span>@Model.ActiveCount active</span> · <span>@Model.InvitedCount pending approval</span></div>
     </div>
     <div class="page-header__actions">
         <a class="btn btn-secondary" href="?handler=Export">@Html.Raw(IconLibrary.Get("download")) Export</a>
@@ -35,6 +36,21 @@
 @if (Model.RemoveError != null)
 {
     <div class="pill pill-critical" style="margin-bottom:16px; padding:8px 12px;">@Html.Raw(IconLibrary.Get("alert-triangle")) @Model.RemoveError</div>
+}
+@if (Model.InviteError != null)
+{
+    <div class="pill pill-critical" style="margin-bottom:16px; padding:8px 12px;">@Html.Raw(IconLibrary.Get("alert-triangle")) @Model.InviteError</div>
+}
+@if (Model.InviteLink != null)
+{
+    <div class="card card-pad" style="margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:700; margin-bottom:8px;">@Html.Raw(IconLibrary.Get("check-circle")) Invitation created — copy this link and send it to the invitee</div>
+        <div style="display:flex; gap:8px;">
+            <input id="invite-link-output" class="input mono" readonly value="@Model.InviteLink" style="flex:1;" onclick="this.select()" />
+            <button type="button" class="btn btn-secondary" data-copy-target="invite-link-output">Copy link</button>
+        </div>
+        <span class="hint">Opening this link signs the invitee's username and password into the login form; a System Administrator must still approve the account before it works.</span>
+    </div>
 }
 
 <div class="tabs" data-tabs="users">
@@ -69,10 +85,16 @@
                                 </form>
                             </td>
                             <td style="font-size:12.5px;">@u.Department</td>
-                            <td><span class="pill @StatusPill(u.Status)">@u.Status</span></td>
+                            <td><span class="pill @StatusPill(u.Status)">@StatusLabel(u.Status)</span></td>
                             <td class="text-muted" style="font-size:12px;">@(u.LastActiveAt?.ToTimeAgo() ?? "Never")</td>
                             <td>
                                 <div class="row-actions">
+                                    @if (u.Status == "Invited" && Model.CanApprove)
+                                    {
+                                        <form method="post" asp-page-handler="Approve" asp-route-id="@u.Id">
+                                            <button class="icon-btn btn-icon-only" type="submit" title="Approve">@Html.Raw(IconLibrary.Get("check"))</button>
+                                        </form>
+                                    }
                                     <form method="post" asp-page-handler="Remove" asp-route-id="@u.Id" onsubmit="return confirm('Remove @u.Name\'s account?');">
                                         <button class="icon-btn btn-icon-only" type="submit" title="Remove">@Html.Raw(IconLibrary.Get("trash"))</button>
                                     </form>
@@ -159,8 +181,12 @@
                 </div>
                 <div class="field"><label>Department</label><input class="input" name="department" placeholder="Fleet Operations" required /></div>
             </div>
-            <span class="hint">A temporary account is created immediately with status "Invited"; in production an email with a secure sign-up link would be sent.</span>
-            <button type="submit" class="btn btn-primary btn-block btn-lg">@Html.Raw(IconLibrary.Get("mail")) Send invitation</button>
+            <div class="form-row">
+                <div class="field"><label>Username</label><input class="input" name="username" placeholder="jordan.blake" required /></div>
+                <div class="field"><label>Temporary password</label><input class="input" type="password" name="password" placeholder="At least 8 characters" minlength="8" required /></div>
+            </div>
+            <span class="hint">A copyable sign-in link will be generated for you to send to the invitee. The account stays "Pending approval" and can't sign in until a System Administrator approves it.</span>
+            <button type="submit" class="btn btn-primary btn-block btn-lg">@Html.Raw(IconLibrary.Get("mail")) Create invitation</button>
         </form>
     </div>
 </div>

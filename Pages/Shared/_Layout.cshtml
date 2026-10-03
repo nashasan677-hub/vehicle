@@ -18,7 +18,10 @@
     var currentLastActive = currentProfile?.LastActiveAt;
     var currentPhotoPath = currentProfile?.PhotoPath;
 
-    var navGroups = new (string Label, (string Key, string Label, string Icon, string Href, int Badge)[] Items)[]
+    var isAdmin = currentRole == "System Administrator";
+    var adminOnlyKeys = new HashSet<string> { "tracking", "maintenance", "reports", "alerts", "users", "settings" };
+
+    var navGroups = (new (string Label, (string Key, string Label, string Icon, string Href, int Badge)[] Items)[]
     {
         ("Overview", new[] {
             ("dashboard", "Dashboard", "dashboard", "/Dashboard", 0),
@@ -39,7 +42,10 @@
             ("users", "Users & Roles", "roles", "/Users", 0),
             ("settings", "Settings", "settings", "/Settings", 0),
         }),
-    };
+    })
+    .Select(g => (g.Label, Items: g.Items.Where(i => isAdmin || !adminOnlyKeys.Contains(i.Key)).ToArray()))
+    .Where(g => g.Items.Length > 0)
+    .ToArray();
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -139,7 +145,10 @@
                         <div class="dropdown-menu" id="notif-menu" style="width:340px; padding: 8px;">
                             <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px 10px;">
                                 <strong style="font-size:13px;">Notifications</strong>
-                                <a href="/Alerts" style="font-size:11.5px;font-weight:650;color:var(--brand-600);">View all</a>
+                                @if (isAdmin)
+                                {
+                                    <a href="/Alerts" style="font-size:11.5px;font-weight:650;color:var(--brand-600);">View all</a>
+                                }
                             </div>
                             @if (!notifications.Any())
                             {
@@ -159,7 +168,10 @@
                             }
                         </div>
                     </div>
-                    <a href="/Settings" class="icon-btn" title="Settings">@Html.Raw(IconLibrary.Get("settings"))</a>
+                    @if (isAdmin)
+                    {
+                        <a href="/Settings" class="icon-btn" title="Settings">@Html.Raw(IconLibrary.Get("settings"))</a>
+                    }
                     <div class="topbar-divider"></div>
                     <div class="dropdown">
                         <button type="button" class="profile-btn" data-dropdown-toggle="profile-menu">
@@ -195,10 +207,13 @@
                             </div>
                             <div class="profile-panel__lastlogin">@Html.Raw(IconLibrary.Get("clock")) Last login @(currentLastActive?.ToTimeAgo() ?? "—")</div>
                             <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="/Settings"><span class="dropdown-item__icon">@Html.Raw(IconLibrary.Get("driver"))</span> My Profile &amp; Settings</a>
-                            <a class="dropdown-item" href="/Settings?tab=security"><span class="dropdown-item__icon">@Html.Raw(IconLibrary.Get("lock"))</span> Change Password</a>
-                            <a class="dropdown-item" href="/Settings?tab=appearance"><span class="dropdown-item__icon">@Html.Raw(IconLibrary.Get("monitor"))</span> Appearance</a>
-                            <div class="dropdown-divider"></div>
+                            @if (isAdmin)
+                            {
+                                <a class="dropdown-item" href="/Settings"><span class="dropdown-item__icon">@Html.Raw(IconLibrary.Get("driver"))</span> My Profile &amp; Settings</a>
+                                <a class="dropdown-item" href="/Settings?tab=security"><span class="dropdown-item__icon">@Html.Raw(IconLibrary.Get("lock"))</span> Change Password</a>
+                                <a class="dropdown-item" href="/Settings?tab=appearance"><span class="dropdown-item__icon">@Html.Raw(IconLibrary.Get("monitor"))</span> Appearance</a>
+                                <div class="dropdown-divider"></div>
+                            }
                             <a href="/Logout" class="btn btn-danger btn-block btn-sm">@Html.Raw(IconLibrary.Get("logout")) Sign Out</a>
                         </div>
                     </div>

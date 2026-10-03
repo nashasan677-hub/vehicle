@@ -202,6 +202,21 @@
     });
   }
 
+  /* ---------------- Copy to clipboard ---------------- */
+  function initCopyButtons() {
+    document.querySelectorAll("[data-copy-target]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var input = document.getElementById(btn.getAttribute("data-copy-target"));
+        if (!input) return;
+        navigator.clipboard.writeText(input.value).then(function () {
+          var original = btn.textContent;
+          btn.textContent = "Copied!";
+          setTimeout(function () { btn.textContent = original; }, 1500);
+        });
+      });
+    });
+  }
+
   /* ---------------- OTP inputs ---------------- */
   function initOtp() {
     document.querySelectorAll("[data-otp-group]").forEach(function (group) {
@@ -292,6 +307,7 @@
     initModals();
     initInvoiceModal();
     initPasswordToggles();
+    initCopyButtons();
     initOtp();
     initMapZoom();
     initChartTooltips();

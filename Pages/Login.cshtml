@@ -25,10 +25,10 @@
 
 <form class="auth-form" method="post">
     <div class="field">
-        <label for="email">Work email</label>
+        <label for="email">Username or work email</label>
         <div class="input-icon-wrap">
             @Html.Raw(IconLibrary.Get("mail"))
-            <input class="input" type="email" id="email" name="Email" value="@Model.Email" placeholder="you@agency.gov" required autofocus />
+            <input class="input" type="text" id="email" name="Email" value="@Model.Email" placeholder="username or you@agency.gov" required autofocus />
         </div>
     </div>
     <div class="field">
@@ -38,7 +38,7 @@
         </div>
         <div class="input-icon-wrap">
             @Html.Raw(IconLibrary.Get("lock"))
-            <input class="input" type="password" id="password" name="Password" placeholder="••••••••••" required />
+            <input class="input" type="password" id="password" name="Password" value="@Model.Password" placeholder="••••••••••" required />
             <button type="button" class="toggle-visibility" data-toggle-visibility="password" aria-label="Show password">
                 @Html.Raw(IconLibrary.Get("eye"))
             </button>

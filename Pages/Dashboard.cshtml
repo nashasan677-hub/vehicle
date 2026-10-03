@@ -4,6 +4,8 @@
     ViewData["Title"] = "Dashboard";
     ViewData["ActiveNav"] = "dashboard";
 
+    var isAdmin = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "System Administrator";
+
     var statusData = new (string Label, int Value, string Color, string Pill)[] {
         ("Active", Model.ActiveVehicles, "var(--status-good)", "pill-good"),
         ("Maintenance", Model.MaintenanceVehicles, "var(--status-warning)", "pill-warning"),
@@ -80,7 +82,7 @@
         <div class="stat-tile__value tabular">@Model.OnTripDrivers<span style="font-size:1rem;color:var(--ink-3);font-weight:650;"> / @Model.TotalDrivers</span></div>
         <div class="stat-tile__foot"><span class="text-muted">on active routes right now</span> <span class="stat-tile__link">View →</span></div>
     </a>
-    <a class="card stat-tile col-4" href="/Alerts?StatusFilter=New" title="Review open alerts">
+    <a class="card stat-tile col-4" href="@(isAdmin ? "/Alerts?StatusFilter=New" : "#")" @(isAdmin ? "" : "onclick=\"return false;\" style=\"cursor:default;\"") title="Review open alerts">
         <div class="stat-tile__top">
             <span class="stat-tile__label">Open alerts</span>
             <div class="stat-tile__icon" style="background:var(--status-critical-tint); color:var(--status-critical);">@Html.Raw(IconLibrary.Get("alert-triangle"))</div>
@@ -96,7 +98,7 @@
         <div class="stat-tile__value tabular">@Model.TodayDistanceKm.ToString("N0")<span style="font-size:1rem;color:var(--ink-3);font-weight:650;"> km</span></div>
         <div class="stat-tile__foot"><span class="text-muted">fleet-wide, in-progress trips included</span> <span class="stat-tile__link">View trips →</span></div>
     </a>
-    <a class="card stat-tile col-4" href="/Reports" title="View fleet performance reports">
+    <a class="card stat-tile col-4" href="@(isAdmin ? "/Reports" : "#")" @(isAdmin ? "" : "onclick=\"return false;\" style=\"cursor:default;\"") title="View fleet performance reports">
         <div class="stat-tile__top">
             <span class="stat-tile__label">Fleet utilization</span>
             <div class="stat-tile__icon">@Html.Raw(IconLibrary.Get("gauge"))</div>
@@ -225,7 +227,10 @@
     <div class="card card-pad col-5">
         <div class="panel-head">
             <div class="panel-title">Notifications</div>
-            <a href="/Alerts" style="font-size:12px; font-weight:650; color:var(--brand-600);">View all</a>
+            @if (isAdmin)
+            {
+                <a href="/Alerts" style="font-size:12px; font-weight:650; color:var(--brand-600);">View all</a>
+            }
         </div>
         <div style="display:flex; flex-direction:column; gap:2px; max-height:230px; overflow-y:auto;">
             @foreach (var n in Model.Notifications)

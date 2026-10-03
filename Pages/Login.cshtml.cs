@@ -24,29 +24,36 @@ public class LoginModel(FleetDbContext db) : PageModel
     public bool ResetSuccess { get; set; }
     public string? Error { get; set; }
 
-    public void OnGet(string? reset, string? sessionExpired)
+    public void OnGet(string? reset, string? sessionExpired, string? username, string? password)
     {
         ResetSuccess = reset == "success";
         if (sessionExpired == "1")
         {
             Error = "Your account is no longer available. Please sign in again.";
         }
+        if (!string.IsNullOrEmpty(username)) Email = username;
+        if (!string.IsNullOrEmpty(password)) Password = password;
     }
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == Email);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == Email || u.Username == Email);
         var hasher = new PasswordHasher<AppUser>();
         var valid = user is not null && hasher.VerifyHashedPassword(user, user.PasswordHash, Password) != PasswordVerificationResult.Failed;
 
         if (!valid || user is null)
         {
-            Error = "That email and password combination doesn't match our records.";
+            Error = "That username/email and password combination doesn't match our records.";
             return Page();
         }
         if (user.Status == "Suspended")
         {
             Error = "This account has been suspended. Contact your fleet administrator.";
+            return Page();
+        }
+        if (user.Status == "Invited")
+        {
+            Error = "This account is awaiting approval from a System Administrator.";
             return Page();
         }
 
