@@ -47,8 +47,11 @@ public class ReportsModel(FleetDbContext db) : PageModel
             ? periodStart.ToString("MMM d, yyyy")
             : $"{periodStart:MMM d} – {periodEnd:MMM d, yyyy}";
 
+        // DateOnly.ToDateTime always returns Kind=Unspecified; Postgres' timestamptz columns reject that.
+        var periodStartUtc = DateTime.SpecifyKind(periodStart.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
+        var periodEndUtc = DateTime.SpecifyKind(periodEnd.AddDays(1).ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
         var trips = await db.Trips.Include(t => t.Vehicle)
-            .Where(t => t.DistanceKm > 0 && t.StartTime >= periodStart.ToDateTime(TimeOnly.MinValue) && t.StartTime < periodEnd.AddDays(1).ToDateTime(TimeOnly.MinValue))
+            .Where(t => t.DistanceKm > 0 && t.StartTime >= periodStartUtc && t.StartTime < periodEndUtc)
             .ToListAsync();
         var distByCat = trips.GroupBy(t => ChartPalette.BucketCategory(t.Vehicle!.Category)).ToDictionary(g => g.Key, g => g.Sum(t => t.DistanceKm));
         CategoryDistance = ChartPalette.CategoryOrder.Select(c => (c, distByCat.GetValueOrDefault(c, 0), ChartPalette.ColorFor(c))).Where(c => c.Item2 > 0).ToList();
