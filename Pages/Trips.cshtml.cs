@@ -55,6 +55,9 @@ public class TripsModel(FleetDbContext db) : PageModel
 
     public async Task<IActionResult> OnPostAddAsync(int vehicleId, int driverId, string origin, string destination, DateTime startTime, string purpose, string? notes)
     {
+        // The <input type="datetime-local"> form field binds with Kind=Unspecified; Postgres'
+        // timestamptz column rejects anything but Utc, so tag it explicitly.
+        startTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
         var count = await db.Trips.CountAsync() + 5501;
         db.Trips.Add(new Trip
         {
