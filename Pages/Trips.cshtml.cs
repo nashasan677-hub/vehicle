@@ -58,10 +58,13 @@ public class TripsModel(FleetDbContext db) : PageModel
         // The <input type="datetime-local"> form field binds with Kind=Unspecified; Postgres'
         // timestamptz column rejects anything but Utc, so tag it explicitly.
         startTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc);
-        var count = await db.Trips.CountAsync() + 5501;
+        // Based on the highest existing number rather than the row count, so a deleted trip
+        // can't leave a gap that makes a freshly computed code collide with one still in use.
+        var codes = await db.Trips.Select(t => t.TripCode).ToListAsync();
+        var nextNumber = codes.Count == 0 ? 5501 : codes.Max(c => int.Parse(c["TRP-".Length..])) + 1;
         db.Trips.Add(new Trip
         {
-            TripCode = $"TRP-{count}", VehicleId = vehicleId, DriverId = driverId, Origin = origin, Destination = destination,
+            TripCode = $"TRP-{nextNumber}", VehicleId = vehicleId, DriverId = driverId, Origin = origin, Destination = destination,
             StartTime = startTime, Purpose = purpose, Notes = notes, Status = startTime <= DateTime.UtcNow ? "In Progress" : "Scheduled",
         });
         await db.SaveChangesAsync();
